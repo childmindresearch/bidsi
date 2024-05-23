@@ -42,4 +42,4 @@ with bidsi.BidsWriter(Path("/home/bids/root/dir"), bidsi.MergeStrategy.OVERWRITE
 
 ## Links or References
 
-- [https://www.wikipedia.de](https://www.wikipedia.de)
+- [BIDS Starter Kit](https://bids-standard.github.io/bids-starter-kit/)
