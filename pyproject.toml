@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "app-name"
+name = "bidsi"
 version = "0.1.0"
-description = "A beautiful description."
-authors = ["Reinder Vos de Wael <reinder.vosdewael@childmind.org>"]
-license = "LGPL-2.1"
+description = "Library for writing BIDS file structures."
+authors = ["Gabriel Schubiner <gabriel.schubiner@childmind.org>"]
+license = "MIT License"
 readme = "README.md"
-packages = [{include = "APP_NAME", from = "src"}]
+packages = [{include = "bidsi", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "~3.11"
