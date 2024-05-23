@@ -1,1 +1,1 @@
-""".. include:: ../../README.md"""  # noqa: D415
+"""Generate BIDS Structure."""
