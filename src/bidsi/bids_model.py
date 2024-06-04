@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
@@ -34,6 +35,19 @@ class BidsConfig:
             rel_path /= self.session_formatter(entity)
         rel_path /= entity.datatype
         return rel_path
+
+    def _clean_bids_field(self, value: str) -> str:
+        """Clean BIDS field value.
+
+        Replaces all non-alphanumeric characters.
+
+        Args:
+            value (str): Value to clean.
+
+        Returns:
+            str: Cleaned value.
+        """
+        return re.sub(r"[^a-zA-Z0-9]", "", value)
 
     def relative_entity_path(self, entity: BidsEntity) -> Path:
         """Return relative path to entity."""
@@ -126,7 +140,39 @@ class BidsModel:
         return list(set([entity.subject_id for entity in self.entities]))
 
 
-@dataclass(frozen=True)
+class EntityFieldStringDescriptor:
+    """Descriptor Object for BIDS fields.
+
+    Cleans field values using a regular expression.
+    """
+
+    def __init__(self, *, clean_regex: str, default: Optional[str] = None) -> None:
+        """Initialize EntityFieldStringDescriptor."""
+        self._default = default
+        self._clean_regex = clean_regex
+
+    def __set_name__(self, owner: type[BidsEntity], name: str) -> None:
+        """Set name with underscore prefix."""
+        self._name = "_" + name
+
+    def __get__(self, obj: BidsEntity, type: type[BidsEntity]) -> str:
+        """Get value or default."""
+        if obj is None:
+            raise AttributeError("No default value for BidsEntityStringDescriptor.")
+
+        return str(getattr(obj, self._name, self._default))
+
+    def __set__(self, obj: object, value: str) -> None:
+        """Set value after substituting clean_regex matches with empty string."""
+        value = re.sub(self._clean_regex, "", value)
+        setattr(obj, self._name, value)
+
+
+# TODO: Add support for cleaning optional fields.
+# TODO: Can BidsEntity be frozen?
+
+
+@dataclass
 class BidsEntity:
     """Model of BIDS entity, a representation of data within the BIDS structure.
 
@@ -134,10 +180,18 @@ class BidsEntity:
     Only one of file or tabular_data should be set.
     """
 
-    subject_id: str
-    datatype: str
-    task_name: str
-    suffix: str
+    subject_id: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
+        clean_regex=r"[^a-zA-Z0-9]"
+    )
+    datatype: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
+        clean_regex=r"[^a-zA-Z0-9]"
+    )
+    task_name: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
+        clean_regex=r"[^a-zA-Z0-9]"
+    )
+    suffix: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
+        clean_regex=r"[^a-zA-Z0-9]"
+    )
     session_id: Optional[str] = None
     metadata: Optional[Dict[str, str]] = None
     file_path: Optional[Path] = None
@@ -151,6 +205,13 @@ class BidsEntity:
     def is_tabular_data(self) -> bool:
         """Return True if entity is tabular data."""
         return self.tabular_data is not None
+
+    @classmethod
+    def bids_field(
+        cls, clean_regex: str, default: Optional[str] = None
+    ) -> EntityFieldStringDescriptor:
+        """Return BidsEntity field descriptor."""
+        return EntityFieldStringDescriptor(clean_regex=clean_regex, default=default)
 
 
 class BidsBuilder:

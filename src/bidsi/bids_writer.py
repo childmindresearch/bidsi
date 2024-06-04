@@ -15,7 +15,6 @@ import pandas as pd
 from .bids_model import BidsBuilder, BidsConfig, BidsEntity, BidsModel
 
 LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
 
 
 class MergeStrategy(Enum):
@@ -24,16 +23,21 @@ class MergeStrategy(Enum):
     NO_MERGE: Do not merge, exit with error on conflict.
     OVERWRITE: Overwrite existing files on conflict.
     KEEP: Keep existing files on conflict.
-    RENAME_FILE: Rename files on conflict using run-label increments.
-    NEW_SESSION: Write new session folder for all data additions.
+    RENAME_SEQUENTIAL: Rename files on conflict using run-label increments.
     """
 
-    UNKNOWN_MERGE = 0
-    NO_MERGE = 1
-    OVERWRITE = 2
-    KEEP = 3
-    RENAME_ENTITIES = 5
-    NEW_SESSION = 6
+    # Do not merge, only proceed with empty BIDS root.
+    # Exit with error on conflict. Default.
+    NO_MERGE = 0
+
+    # Overwrite existing files on conflict.
+    OVERWRITE = 1
+
+    # Keep existing files on conflict.
+    KEEP = 2
+
+    # Rename files on conflict using run-label increments.
+    RENAME_SEQUENTIAL = 3
 
     def __str__(self) -> str:
         """Return string representation of MergeStrategy."""
@@ -80,7 +84,7 @@ class BidsWriter:
         return self.write()
 
     def builder(self) -> BidsBuilder:
-        """Return BIDS builder."""
+        """Return BIDS builder, creating new if does not already exist."""
         if self._builder is None:
             self._builder = BidsBuilder()
         return self._builder
@@ -103,7 +107,7 @@ class BidsWriter:
         data.to_csv(path, sep="\t", index=False)
 
     def _ensure_directory_path(self, path: Path, is_dir: bool = False) -> None:
-        """Ensure directory path exists."""
+        """Ensure directory path, or path to parent dir of file exists, or create."""
         if is_dir:
             if not path.exists():
                 path.mkdir(parents=True, exist_ok=True)
@@ -133,32 +137,26 @@ class BidsWriter:
             return
         elif self._entity_merge_strategy == MergeStrategy.KEEP:
             return
-        elif self._entity_merge_strategy == MergeStrategy.RENAME_ENTITIES:
-            raise NotImplementedError("RENAME_ENTITIES merge strategy not implemented.")
-        elif self._entity_merge_strategy == MergeStrategy.NEW_SESSION:
-            raise NotImplementedError("New session merge strategy not implemented.")
         else:
             raise ValueError(f"Unknown merge strategy {self._entity_merge_strategy}.")
 
     def write(self) -> bool:
         """Write BIDS structure to disk."""
         if self._bids is None and self._builder is None:
-            raise ValueError("No BIDS model to write.")
+            raise ValueError("No BIDS model or builder to write.")
 
         if self._bids is None and self._builder is not None:
             self._bids = self._builder.build()
 
         # Unwrap Optional value for type-checking.
         if self._bids is None:
-            raise ValueError("No BIDS model or BIDS Builder to write.")
+            raise ValueError("No BIDS model to write.")
 
         # Write BIDS structure
         # Confirm root
         LOG.info(f"Writing BIDS structure to {self._bids_root}")
-        self._bids_root.mkdir(parents=True, exist_ok=True)
+        self._ensure_directory_path(self._bids_root, is_dir=True)
         if len(list(self._bids_root.iterdir())) > 0:
-            if self._entity_merge_strategy == MergeStrategy.UNKNOWN_MERGE:
-                raise ValueError("BIDS root is not empty, merge strategy required.")
             if self._entity_merge_strategy == MergeStrategy.NO_MERGE:
                 raise ValueError("BIDS root is not empty, cannot merge.")
 
@@ -178,11 +176,12 @@ class BidsWriter:
 
         # Write subject folders
         for entity in self._bids.entities:
-            LOG.info(f"Writing entity {entity.subject_id}")
             if entity.file_path is not None:
+                LOG.info(f"Writing Path entity {entity.subject_id}")
                 fp = entity.file_path
                 self._merge_entity(entity, lambda path: shutil.copy2(fp, path))
             elif entity.tabular_data is not None:
+                LOG.info(f"Writing tabular data entity {entity.subject_id}")
                 tb = entity.tabular_data
                 self._merge_entity(
                     entity,
