@@ -5,52 +5,17 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-from enum import Enum
 from pathlib import Path
 from types import TracebackType
 from typing import Callable, Dict, Optional, Type
 
 import pandas as pd
 
+from bidsi.bids_config import MergeStrategy
+
 from .bids_model import BidsBuilder, BidsConfig, BidsEntity, BidsModel
 
 LOG = logging.getLogger(__name__)
-
-
-class MergeStrategy(Enum):
-    """Merge strategy for BIDS structure.
-
-    NO_MERGE: Do not merge, exit with error on conflict.
-    OVERWRITE: Overwrite existing files on conflict.
-    KEEP: Keep existing files on conflict.
-    RENAME_SEQUENTIAL: Rename files on conflict using run-label increments.
-    """
-
-    # Do not merge, only proceed with empty BIDS root.
-    # Exit with error on conflict. Default.
-    NO_MERGE = 0
-
-    # Overwrite existing files on conflict.
-    OVERWRITE = 1
-
-    # Keep existing files on conflict.
-    KEEP = 2
-
-    # Rename files on conflict using run-label increments.
-    RENAME_SEQUENTIAL = 3
-
-    def __str__(self) -> str:
-        """Return string representation of MergeStrategy."""
-        return self.name
-
-    def __repr__(self) -> str:
-        """Return string representation of MergeStrategy."""
-        return f"{self.__class__}.{str(self)}"
-
-    @staticmethod
-    def argparse(s: str) -> MergeStrategy:
-        """Parse MergeStrategy from argparse string."""
-        return MergeStrategy[s.upper()]
 
 
 class BidsWriter:

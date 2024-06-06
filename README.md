@@ -40,6 +40,43 @@ with bidsi.BidsWriter(Path("/home/bids/root/dir"), bidsi.MergeStrategy.OVERWRITE
 
 ```
 
+## Configuration
+
+```
+clean_fields: bool         # if true, limit field values in output paths to alphanumeric characters.
+include_session_dir: bool  # if true, include ses-<session_id> in BIDS tree. Autoincrement if no id available.
+merge_config:              # object representing how to merge into existing BIDS structure.
+  merge_participants: <merge_type>          # participants.tsv
+  merge_dataset_description: <merge_type>   # dataset_description.json
+  merge_entity_metadata: <merge_type>       # JSON sidecar for entities
+  merge_entity: <merge_type>                # Entity data itself. MERGE unavailable except for TSV entities
+  merge_subject_dir: <merge_type>           # Merge each subject directory
+  merge_session_dir: <merge_type>           # Merge each session directory
+entity_name_config:
+  - name: <filter_name>         # Used for logging / debugging
+    filter:                     # Select to which entities this name config applies
+      - field: <field_name>     # Field of entity to filter on
+        pattern: <regex>        # Pattern to match against field
+    suffix: <suffix>            # Suffix to use for entities that match filters. This does not include
+                                # the file extension, which will be .tsv for tabular data and copied from
+                                # the original file if entity is a file.
+    fields:                     # Field order in name. Uses BidsEntity field names and BidsEntity.metadata
+      - subject
+      - task
+      - ...
+  default:                      # Default naming convention. No filters, uses only default extensions.
+    name: <filter_name>
+    suffix: <suffix>
+    fields:
+      - subject
+      - session
+      - task
+      - ...
+```
+```
+merge_type = MERGE | OVERWRITE | KEEP | INCREMENT | NONE
+```
+
 ## Links or References
 
 - [BIDS Starter Kit](https://bids-standard.github.io/bids-starter-kit/)

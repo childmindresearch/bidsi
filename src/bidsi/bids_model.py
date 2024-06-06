@@ -140,6 +140,7 @@ class BidsModel:
         return list(set([entity.subject_id for entity in self.entities]))
 
 
+# DEPRECATED: Cleaning will be done on write.
 class EntityFieldStringDescriptor:
     """Descriptor Object for BIDS fields.
 
@@ -168,11 +169,7 @@ class EntityFieldStringDescriptor:
         setattr(obj, self._name, value)
 
 
-# TODO: Add support for cleaning optional fields.
-# TODO: Can BidsEntity be frozen?
-
-
-@dataclass
+@dataclass(frozen=True)
 class BidsEntity:
     """Model of BIDS entity, a representation of data within the BIDS structure.
 
@@ -180,18 +177,10 @@ class BidsEntity:
     Only one of file or tabular_data should be set.
     """
 
-    subject_id: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
-        clean_regex=r"[^a-zA-Z0-9]"
-    )
-    datatype: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
-        clean_regex=r"[^a-zA-Z0-9]"
-    )
-    task_name: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
-        clean_regex=r"[^a-zA-Z0-9]"
-    )
-    suffix: EntityFieldStringDescriptor = EntityFieldStringDescriptor(
-        clean_regex=r"[^a-zA-Z0-9]"
-    )
+    subject_id: str
+    datatype: str
+    task_name: str
+    suffix: str
     session_id: Optional[str] = None
     metadata: Optional[Dict[str, str]] = None
     file_path: Optional[Path] = None
@@ -205,13 +194,6 @@ class BidsEntity:
     def is_tabular_data(self) -> bool:
         """Return True if entity is tabular data."""
         return self.tabular_data is not None
-
-    @classmethod
-    def bids_field(
-        cls, clean_regex: str, default: Optional[str] = None
-    ) -> EntityFieldStringDescriptor:
-        """Return BidsEntity field descriptor."""
-        return EntityFieldStringDescriptor(clean_regex=clean_regex, default=default)
 
 
 class BidsBuilder:

@@ -1,0 +1,32 @@
+[structure]
+clean_fields = true
+include_session_dir = false
+
+[merge]
+participants = "MERGE"
+dataset_description = "OVERWRITE"
+entity_metadata = "OVERWRITE"
+entity = "OVERWRITE"
+subject_dir = "OVERWRITE"
+session_dir = "OVERWRITE"
+
+[entity]
+default_template = ["subject", "task", "suffix"]
+
+[[entity.templates]]
+name = "name"
+suffix = "suffix"
+fields = ["subject", "task", "suffix"]
+
+[[entity.templates.filters]]
+field = "task"
+pattern = "regex"
+
+[[entity.templates]]
+name = "name2"
+suffix = "suffix2"
+fields = ["subject", "suffix"]
+
+[[entity.templates.filters]]
+field = "subject"
+pattern = "regex2"
