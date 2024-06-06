@@ -118,7 +118,6 @@ class BidsConfig(BaseSettings):
         """Create BidsConfig object from string."""
         return cls.from_dict(tomllib.loads(config_string))
 
-    # @model_validator(mode="before")
     @classmethod
     def from_dict(cls, config_dict: dict) -> BidsConfig:
         """Create BidsConfig object from dictionary."""

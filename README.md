@@ -42,36 +42,39 @@ with bidsi.BidsWriter(Path("/home/bids/root/dir"), bidsi.MergeStrategy.OVERWRITE
 
 ## Configuration
 
-```
-clean_fields: bool         # if true, limit field values in output paths to alphanumeric characters.
-include_session_dir: bool  # if true, include ses-<session_id> in BIDS tree. Autoincrement if no id available.
-merge_config:              # object representing how to merge into existing BIDS structure.
-  merge_participants: <merge_type>          # participants.tsv
-  merge_dataset_description: <merge_type>   # dataset_description.json
-  merge_entity_metadata: <merge_type>       # JSON sidecar for entities
-  merge_entity: <merge_type>                # Entity data itself. MERGE unavailable except for TSV entities
-  merge_subject_dir: <merge_type>           # Merge each subject directory
-  merge_session_dir: <merge_type>           # Merge each session directory
-entity_name_config:
-  - name: <filter_name>         # Used for logging / debugging
-    filter:                     # Select to which entities this name config applies
-      - field: <field_name>     # Field of entity to filter on
-        pattern: <regex>        # Pattern to match against field
-    suffix: <suffix>            # Suffix to use for entities that match filters. This does not include
-                                # the file extension, which will be .tsv for tabular data and copied from
-                                # the original file if entity is a file.
-    fields:                     # Field order in name. Uses BidsEntity field names and BidsEntity.metadata
-      - subject
-      - task
-      - ...
-  default:                      # Default naming convention. No filters, uses only default extensions.
-    name: <filter_name>
-    suffix: <suffix>
-    fields:
-      - subject
-      - session
-      - task
-      - ...
+```toml
+[structure]
+clean_fields = true          # if true, limit field values in output paths to alphanumeric characters.
+include_session_dir = false  # if true, include ses-<session_id> in BIDS tree. Autoincrement if no id available.
+
+[merge]      # object representing how to merge into existing BIDS structure.
+participants = "MERGE"                # participants.tsv
+dataset_description = "OVERWRITE"     # dataset_description.json
+entity_metadata = "OVERWRITE"         # JSON sidecar for entities
+entity = "OVERWRITE"                  # Entity data itself. MERGE unavailable except for TSV entities
+subject_dir = "OVERWRITE"             # Merge each subject directory
+session_dir = "OVERWRITE"             # Merge each session directory
+
+[entity]       # Entity config. Controls how specific BIDS entities are named, referencing fields of BidsEntity and metadata.
+default_template = ["subject", "task", "suffix"]     # Default fields included in name.
+
+[[entity.templates]]       # List of templates for specific entity types.
+name = "name"              # Name of this entity type, for debugging.
+suffix = "suffix"          # Suffix for this entity type.
+fields = ["subject", "task", "suffix"]       # Fields included in entity file name.
+
+[[entity.templates.filters]]  # List of filter specifications for which entity types the above template applies.
+field = "task"                # Field to match.
+pattern = "regex"             # Pattern to match against field.
+
+[[entity.templates]]       # Second entity template example.
+name = "name2"
+suffix = "suffix2"
+fields = ["subject", "suffix"]
+
+[[entity.templates.filters]]
+field = "subject"
+pattern = "regex2"
 ```
 ```
 merge_type = MERGE | OVERWRITE | KEEP | INCREMENT | NONE
