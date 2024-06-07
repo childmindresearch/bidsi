@@ -140,35 +140,6 @@ class BidsModel:
         return list(set([entity.subject_id for entity in self.entities]))
 
 
-# DEPRECATED: Cleaning will be done on write.
-class EntityFieldStringDescriptor:
-    """Descriptor Object for BIDS fields.
-
-    Cleans field values using a regular expression.
-    """
-
-    def __init__(self, *, clean_regex: str, default: Optional[str] = None) -> None:
-        """Initialize EntityFieldStringDescriptor."""
-        self._default = default
-        self._clean_regex = clean_regex
-
-    def __set_name__(self, owner: type[BidsEntity], name: str) -> None:
-        """Set name with underscore prefix."""
-        self._name = "_" + name
-
-    def __get__(self, obj: BidsEntity, type: type[BidsEntity]) -> str:
-        """Get value or default."""
-        if obj is None:
-            raise AttributeError("No default value for BidsEntityStringDescriptor.")
-
-        return str(getattr(obj, self._name, self._default))
-
-    def __set__(self, obj: object, value: str) -> None:
-        """Set value after substituting clean_regex matches with empty string."""
-        value = re.sub(self._clean_regex, "", value)
-        setattr(obj, self._name, value)
-
-
 @dataclass(frozen=True)
 class BidsEntity:
     """Model of BIDS entity, a representation of data within the BIDS structure.
