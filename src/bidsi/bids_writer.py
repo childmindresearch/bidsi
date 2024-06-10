@@ -154,7 +154,7 @@ class BidsWriter:
 
     def _merge_entity(self, entity: BidsEntity, dir: Path) -> None:
         """Write file respecting MergeStrategy."""
-        expected_filepath = dir / self._config.entity_name(entity)
+        expected_filepath = dir / self._config.entity.entity_name(entity)
         LOG.debug(f"Merging entity to {expected_filepath}")
         self._ensure_directory_path(expected_filepath)
         if entity.file_path is not None:
@@ -176,7 +176,9 @@ class BidsWriter:
         else:
             raise ValueError(f"Unknown entity type for {entity}")
         if entity.metadata:
-            expected_metadata_filepath = dir / self._config.entity_metadata_name(entity)
+            expected_metadata_filepath = dir / self._config.entity.entity_metadata_name(
+                entity
+            )
             LOG.debug(f"Merging metadata for {entity}")
             self._merge(
                 expected_metadata_filepath,
