@@ -7,7 +7,7 @@ import re
 import tomllib
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cache
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -189,7 +189,7 @@ class EntityConfig:
     clean_fields: bool = True
     supplemental_abbreviations: dict[str, str] = field(default_factory=dict)
 
-    @cache
+    @cached_property
     def abbreviations(self) -> dict[str, str]:
         """Return combined standard and supplemental abbreviations."""
         standard_abbreviations = {
@@ -206,10 +206,10 @@ class EntityConfig:
         for template in self.templates:
             if template.match(entity):
                 return template.entity_name(
-                    entity, self.clean_fields, self.abbreviations()
+                    entity, self.clean_fields, self.abbreviations
                 )
         return self.default_template.entity_name(
-            entity, self.clean_fields, self.abbreviations()
+            entity, self.clean_fields, self.abbreviations
         )
 
     def entity_metadata_name(self, entity: BidsEntity) -> str:
