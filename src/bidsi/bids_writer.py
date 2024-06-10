@@ -207,7 +207,7 @@ class BidsWriter:
                 return path, True
             case MergeStrategy.OVERWRITE:
                 # Remove and recreate directory.
-                shutil.rmtree(path)
+                shutil.rmtree(path, ignore_errors=True)
                 self._ensure_directory_path(path, is_dir=True)
                 return path, True
             case MergeStrategy.KEEP:
