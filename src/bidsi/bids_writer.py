@@ -137,20 +137,27 @@ class BidsWriter:
     ) -> None:
         """Merge file with BIDS structure respecting Merge config."""
         LOG.debug(f"Merging resource to {path}")
-        if path.exists():
-            match merge_strategy:
-                case MergeStrategy.NO_MERGE:
+        # Set path and resource according to merge_strategy.
+        # Raise error if path exists and merge_strategy is NO_MERGE.
+        # Return early to avoid writing.
+        match merge_strategy:
+            case MergeStrategy.NO_MERGE:
+                if path.exists():
                     raise ValueError(f"File {path} already exists.")
-                case MergeStrategy.OVERWRITE:
-                    write_op(path, resource)
-                case MergeStrategy.KEEP:
+            case MergeStrategy.OVERWRITE:
+                if path.exists():
+                    LOG.debug(f"Overwriting file at {path}")
+            case MergeStrategy.KEEP:
+                if path.exists():
+                    LOG.debug(f"Keeping existing file at {path}")
                     return
-                case MergeStrategy.RENAME_SEQUENTIAL:
-                    # Set Path to new file with run-label increment
-                    pass
-                case MergeStrategy.MERGE:
-                    merged_resource = merge_op(path, resource)
-                    write_op(path, merged_resource)
+            case MergeStrategy.RENAME_SEQUENTIAL:
+                # Set Path to new file with run-label increment
+                pass
+            case MergeStrategy.MERGE:
+                if path.exists():
+                    resource = merge_op(path, resource)
+        write_op(path, resource)
 
     def _merge_entity(self, entity: BidsEntity, dir: Path) -> None:
         """Write file respecting MergeStrategy."""
@@ -158,6 +165,7 @@ class BidsWriter:
         LOG.debug(f"Merging entity to {expected_filepath}")
         self._ensure_directory_path(expected_filepath)
         if entity.file_path is not None:
+            LOG.debug(f"Merging file for {entity}")
             self._merge(
                 expected_filepath,
                 entity.file_path,
@@ -166,6 +174,7 @@ class BidsWriter:
                 self._write_file,
             )
         elif entity.tabular_data is not None:
+            LOG.debug(f"Merging tabular data for {entity}")
             self._merge(
                 expected_filepath,
                 entity.tabular_data,
