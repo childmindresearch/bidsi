@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -56,12 +56,12 @@ class BidsEntity:
     subject_id: str
     datatype: str
     task_name: str
-    suffix: Optional[str] = None
-    session_id: Optional[str] = None
-    metadata: Optional[Dict[str, str]] = None
-    file_path: Optional[Path] = None
-    tabular_data: Optional[pd.DataFrame] = None
-    run_id: Optional[str] = None
+    suffix: Optional[str] = field(default=None, repr=False)
+    session_id: Optional[str] = field(default=None, repr=False)
+    metadata: Optional[Dict[str, str]] = field(default=None, repr=False)
+    file_path: Optional[Path] = field(default=None, repr=False)
+    tabular_data: Optional[pd.DataFrame] = field(default=None, repr=False)
+    run_id: Optional[str] = field(default=None, repr=False)
 
     def is_file_resource(self) -> bool:
         """Return True if entity is a file resource."""
