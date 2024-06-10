@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -75,7 +75,7 @@ class BidsEntity:
         """Return extension of file resource."""
         return self.file_path.suffix if self.file_path is not None else ".tsv"
 
-    @cache
+    @cached_property
     def attribute_dict(self) -> Dict[str, str]:
         """Construct a dict of all attributes for template filtering."""
         attributes = copy.deepcopy(self.metadata) if self.metadata is not None else {}
@@ -98,12 +98,10 @@ class BidsEntity:
 class BidsBuilder:
     """Builder for BIDS Model."""
 
-    def __init__(
-        self, entities: List[BidsEntity] = [], dataset_description: Dict[str, str] = {}
-    ) -> None:
+    def __init__(self) -> None:
         """Initialize BIDS builder."""
-        self._entities = entities
-        self._dataset_description = dataset_description
+        self._entities: list[BidsEntity] = []
+        self._dataset_description: dict[str, Any] = {}
 
     def build(self) -> BidsModel:
         """Build BIDS model."""
@@ -130,8 +128,8 @@ class BidsBuilder:
         subject_id: str,
         datatype: str,
         task_name: str,
-        suffix: str,
         resource: Path | pd.DataFrame,
+        suffix: Optional[str] = None,
         run_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, str]] = None,

@@ -100,8 +100,8 @@ class EntityTemplateFilter:
     def match(self, entity: BidsEntity) -> bool:
         """Match entity against filter."""
         return (
-            self.field in entity.attribute_dict()
-            and re.match(self.pattern, entity.attribute_dict()[self.field]) is not None
+            self.field in entity.attribute_dict
+            and re.match(self.pattern, entity.attribute_dict[self.field]) is not None
         )
 
 
@@ -138,7 +138,7 @@ class EntityTemplate:
         self, entity: BidsEntity, clean: bool = True, abbrev: dict[str, str] = {}
     ) -> str:
         """Generate entity name from entity."""
-        entity_dict = entity.attribute_dict()
+        entity_dict = entity.attribute_dict
         name_pieces = []
         # Iterate over template.
         for template_field in self.template:
