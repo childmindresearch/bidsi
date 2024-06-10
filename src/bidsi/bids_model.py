@@ -2,108 +2,13 @@
 
 from __future__ import annotations
 
-import re
+import copy
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cache, cached_property
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-
-
-@dataclass
-class BidsConfig:
-    """Configuration for BIDS structure generation."""
-
-    subject_formatter: Callable[[BidsEntity], str]
-    task_name_formatter: Callable[[BidsEntity], str]
-    session_formatter: Callable[[BidsEntity], str]
-    entity_formatter: Callable[[BidsEntity], str]
-    merge_participants_tsv: bool = True
-    merge_dataset_description: bool = True
-    # If include_sessions is True, then the BIDS model will include session folders.
-    include_sessions: bool = False
-    default_session_name: Optional[str] = None
-    # TODO: Implement increment_session_id option for auto-incrementing numerical
-    # session IDs. Requires another lambda to order sessions.
-    # increment_session_id: bool = False
-
-    def relative_entity_dir(self, entity: BidsEntity) -> Path:
-        """Return relative path to entity."""
-        rel_path = Path(self.subject_formatter(entity))
-        if self.include_sessions:
-            rel_path /= self.session_formatter(entity)
-        rel_path /= entity.datatype
-        return rel_path
-
-    def _clean_bids_field(self, value: str) -> str:
-        """Clean BIDS field value.
-
-        Replaces all non-alphanumeric characters.
-
-        Args:
-            value (str): Value to clean.
-
-        Returns:
-            str: Cleaned value.
-        """
-        return re.sub(r"[^a-zA-Z0-9]", "", value)
-
-    def relative_entity_path(self, entity: BidsEntity) -> Path:
-        """Return relative path to entity."""
-        return self.relative_entity_dir(entity) / self.entity_formatter(entity)
-
-    def relative_entity_metadata_path(self, entity: BidsEntity) -> Path:
-        """Return relative path to entity metadata."""
-        return self.relative_entity_path(entity).with_suffix(".json")
-
-    @classmethod
-    def default(cls) -> BidsConfig:
-        """Return default BIDS configuration."""
-        return BidsConfig(
-            subject_formatter=cls.default_subject_formatter(),
-            task_name_formatter=cls.default_task_name_formatter(),
-            session_formatter=cls.default_session_formatter(),
-            entity_formatter=cls.default_entity_formatter(),
-        )
-
-    @classmethod
-    def default_subject_formatter(cls) -> Callable[[BidsEntity], str]:
-        """Return default subject formatter."""
-        return lambda entity: f"sub-{entity.subject_id}"
-
-    @classmethod
-    def default_task_name_formatter(cls) -> Callable[[BidsEntity], str]:
-        """Return default task name formatter."""
-        return lambda entity: f"task-{entity.task_name}"
-
-    @classmethod
-    def default_session_formatter(cls) -> Callable[[BidsEntity], str]:
-        """Return default session formatter."""
-        return lambda entity: f"ses-{entity.session_id}"
-
-    @classmethod
-    def default_entity_formatter(cls) -> Callable[[BidsEntity], str]:
-        """Return default entity formatter.
-
-        Assumes all entities have session_ids.
-        """
-
-        def entity_formatter(entity: BidsEntity) -> str:
-            name_parts = [f"sub-{entity.subject_id}"]
-            # TODO: Include session_id in entity name.
-            # if entity.session_id is not None:
-            #     name_parts.append(f"ses-{entity.session_id}")
-            # else:
-            #     # Raise ValueError because if any entities have session IDs, all must.
-            #     raise ValueError("Session ID is required.")
-            name_parts.append(f"task-{entity.task_name}")
-            if entity.run_id is not None:
-                name_parts.append(f"run-{entity.run_id}")
-            name_parts.append(entity.suffix)
-            return "_".join(name_parts)
-
-        return entity_formatter
 
 
 @dataclass(frozen=True)
@@ -151,7 +56,7 @@ class BidsEntity:
     subject_id: str
     datatype: str
     task_name: str
-    suffix: str
+    suffix: Optional[str] = None
     session_id: Optional[str] = None
     metadata: Optional[Dict[str, str]] = None
     file_path: Optional[Path] = None
@@ -165,6 +70,29 @@ class BidsEntity:
     def is_tabular_data(self) -> bool:
         """Return True if entity is tabular data."""
         return self.tabular_data is not None
+
+    def extension(self) -> str:
+        """Return extension of file resource."""
+        return self.file_path.suffix if self.file_path is not None else ".tsv"
+
+    @cache
+    def attribute_dict(self) -> Dict[str, str]:
+        """Construct a dict of all attributes for template filtering."""
+        attributes = copy.deepcopy(self.metadata) if self.metadata is not None else {}
+        attributes.update(
+            {
+                "subject_id": self.subject_id,
+                "datatype": self.datatype,
+                "task_name": self.task_name,
+            }
+        )
+        if self.suffix:
+            attributes["suffix"] = self.suffix
+        if self.session_id:
+            attributes["session_id"] = self.session_id
+        if self.run_id:
+            attributes["run_id"] = self.run_id
+        return attributes
 
 
 class BidsBuilder:

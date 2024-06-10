@@ -16,7 +16,7 @@ default_template = ["subject", "task", "suffix"]
 [[entity.templates]]
 name = "name"
 suffix = "suffix"
-fields = ["subject", "task", "suffix"]
+template = ["subject", "task", "suffix"]
 
 [[entity.templates.filters]]
 field = "task"
@@ -25,7 +25,7 @@ pattern = "regex"
 [[entity.templates]]
 name = "name2"
 suffix = "suffix2"
-fields = ["subject", "suffix"]
+template = ["subject", "suffix"]
 
 [[entity.templates.filters]]
 field = "subject"

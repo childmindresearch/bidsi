@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import logging
+import re
 import tomllib
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import cache
 from pathlib import Path
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .bids_model import BidsEntity
+
+LOG = logging.getLogger(__name__)
 
 
 class MergeStrategy(Enum):
@@ -53,7 +61,6 @@ class MergeStrategy(Enum):
 class BidsStructureConfig:
     """Structure config."""
 
-    clean_fields: bool = True
     include_session_dir: bool = False
 
 
@@ -61,11 +68,25 @@ class BidsStructureConfig:
 class BidsMergeConfig:
     """Merge config."""
 
+    # Merge strategy for BIDS structure. Whether to merge BIDS root. Default: NO_MERGE.
+    bids: MergeStrategy = field(default=MergeStrategy.NO_MERGE)
+
+    # Merge strategy for participants.tsv. Default: MERGE.
     participants: MergeStrategy = field(default=MergeStrategy.MERGE)
+
+    # Merge strategy for dataset_description.json. Default: MERGE.
     dataset_description: MergeStrategy = field(default=MergeStrategy.MERGE)
+
+    # Merge strategy for entity metadata as JSON sidecar. Default: MERGE.
     entity_metadata: MergeStrategy = field(default=MergeStrategy.MERGE)
+
+    # Merge strategy for entity files. Default: OVERWRITE.
     entity: MergeStrategy = field(default=MergeStrategy.OVERWRITE)
+
+    # Merge strategy for subject directories. Default: MERGE.
     subject_dir: MergeStrategy = field(default=MergeStrategy.MERGE)
+
+    # Merge strategy for session directories. Default: RENAME_SEQUENTIAL.
     session_dir: MergeStrategy = field(default=MergeStrategy.RENAME_SEQUENTIAL)
 
 
@@ -76,15 +97,83 @@ class EntityTemplateFilter:
     field: str
     pattern: str
 
+    def match(self, entity: BidsEntity) -> bool:
+        """Match entity against filter."""
+        return (
+            self.field in entity.attribute_dict()
+            and re.match(self.pattern, entity.attribute_dict()[self.field]) is not None
+        )
+
 
 @dataclass
 class EntityTemplate:
     """Entity naming template."""
 
+    # Name of template, used for logging only.
     name: str
-    suffix: str
-    fields: list[str] = field(default_factory=list)
+
+    # Override suffix for entity name. If None, uses suffix defined in BidsEntity.
+    # Should not include file extension, which is computed in BidsEntity based on
+    # original file/data type.
+    suffix: Optional[str] = None
+
+    # List of fields to include in entity name, in order.
+    # Should match fields in BidsEntity or keys in BidsEntity.metadata.
+    # Will be subsituted with abbreviations if present in abbreviations dictionary.
+    template: list[str] = field(default_factory=list)
+
+    # List of filters to apply to entity before naming.
     filters: list[EntityTemplateFilter] = field(default_factory=list)
+
+    def match(self, entity: BidsEntity) -> bool:
+        """Match entity against template."""
+        # Check if all filters match.
+        return all(filter_.match(entity) for filter_ in self.filters)
+
+    def maybe_clean(self, field: str, clean: bool) -> str:
+        """Maybe clean BIDS field value."""
+        return re.sub(r"[^a-zA-Z0-9]", "", field) if clean else field
+
+    def entity_name(
+        self, entity: BidsEntity, clean: bool = True, abbrev: dict[str, str] = {}
+    ) -> str:
+        """Generate entity name from entity."""
+        entity_dict = entity.attribute_dict()
+        name_pieces = []
+        # Iterate over template.
+        for template_field in self.template:
+            if template_field not in entity_dict:
+                raise ValueError(
+                    f"Template field {template_field} not in entity {entity}"
+                )
+            if template_field in abbrev:
+                name_pieces.append(
+                    f"{self.maybe_clean(abbrev[template_field], clean)}-"
+                    f"{self.maybe_clean(entity_dict[template_field], clean)}"
+                )
+            else:
+                name_pieces.append(
+                    f"{self.maybe_clean(template_field, clean)}-"
+                    f"{self.maybe_clean(entity_dict[template_field], clean)}"
+                )
+        # Use override suffix if present, otherwise use entity suffix.
+        # Exclude if neither is present.
+        entity_suffix = self.suffix if self.suffix is not None else entity.suffix
+        if entity_suffix is None or entity_suffix == "":
+            LOG.info(
+                f"No suffix for entity {entity}: "
+                f"skipping suffix in template ({self.name})."
+            )
+        else:
+            name_pieces.append(self.maybe_clean(entity_suffix, clean))
+
+        # Add '.' to extension if not present.
+        entity_filename = "_".join(name_pieces) + entity.extension()
+        LOG.debug(
+            f"Entity name for {entity} using template {self.name}: {entity_filename}"
+        )
+
+        return entity_filename
 
 
 @dataclass
@@ -92,12 +181,42 @@ class EntityConfig:
     """Config for entity naming."""
 
     templates: list[EntityTemplate] = field(default_factory=list)
-    default_template: list[str] = field(
-        default_factory=lambda: ["subject", "task", "suffix"]
+    default_template: EntityTemplate = field(
+        default_factory=lambda: EntityTemplate(
+            name="default", suffix="", template=["subject_id", "task_name"], filters=[]
+        )
     )
+    clean_fields: bool = True
+    supplemental_abbreviations: dict[str, str] = field(default_factory=dict)
+
+    @cache
+    def abbreviations(self) -> dict[str, str]:
+        """Return combined standard and supplemental abbreviations."""
+        standard_abbreviations = {
+            "subject_id": "sub",
+            "task_name": "task",
+            "session_id": "ses",
+            "run_id": "run",
+        }
+        return {**standard_abbreviations, **self.supplemental_abbreviations}
+
+    def entity_name(self, entity: BidsEntity) -> str:
+        """Generate entity name from entity."""
+        # Iterate over templates.
+        for template in self.templates:
+            if template.match(entity):
+                return template.entity_name(
+                    entity, self.clean_fields, self.abbreviations()
+                )
+        return self.default_template.entity_name(
+            entity, self.clean_fields, self.abbreviations()
+        )
+
+    def entity_metadata_name(self, entity: BidsEntity) -> str:
+        """Generate entity metadata name from entity."""
+        return str(Path(self.entity_name(entity)).with_suffix(".json"))
 
 
-# @dataclass
 class BidsConfig(BaseSettings):
     """Config object for Bidsi."""
 
@@ -106,6 +225,11 @@ class BidsConfig(BaseSettings):
     structure: BidsStructureConfig = BidsStructureConfig()
     merge: BidsMergeConfig = BidsMergeConfig()
     entity: EntityConfig = EntityConfig()
+
+    @classmethod
+    def default(cls) -> BidsConfig:
+        """Return default BIDS configuration."""
+        return BidsConfig()
 
     @classmethod
     def from_file(cls, config_file: Path) -> BidsConfig:
@@ -121,5 +245,4 @@ class BidsConfig(BaseSettings):
     @classmethod
     def from_dict(cls, config_dict: dict) -> BidsConfig:
         """Create BidsConfig object from dictionary."""
-        # return from_dict(data_class=cls, data=config_dict, config=Config(cast=[Enum]))
         return cls.model_validate(config_dict)

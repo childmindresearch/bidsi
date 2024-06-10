@@ -61,7 +61,7 @@ default_template = ["subject", "task", "suffix"]     # Default fields included i
 [[entity.templates]]       # List of templates for specific entity types.
 name = "name"              # Name of this entity type, for debugging.
 suffix = "suffix"          # Suffix for this entity type.
-fields = ["subject", "task", "suffix"]       # Fields included in entity file name.
+template = ["subject", "task", "suffix"]       # Fields included in entity file name.
 
 [[entity.templates.filters]]  # List of filter specifications for which entity types the above template applies.
 field = "task"                # Field to match.
@@ -70,7 +70,7 @@ pattern = "regex"             # Pattern to match against field.
 [[entity.templates]]       # Second entity template example.
 name = "name2"
 suffix = "suffix2"
-fields = ["subject", "suffix"]
+template = ["subject", "suffix"]
 
 [[entity.templates.filters]]
 field = "subject"
