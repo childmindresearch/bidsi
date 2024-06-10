@@ -316,5 +316,6 @@ class BidsWriter:
             # if not session_dirs[(entity.subject_id, entity.session_id)][1]:
             #    LOG.info(f"Skipping entity for session_id merge restriction: {entity}")
             #     continue
-            self._merge_entity(entity, subject_dirs[entity.subject_id][0])
+            entity_dir = subject_dirs[entity.subject_id][0] / entity.datatype
+            self._merge_entity(entity, entity_dir)
         return True
