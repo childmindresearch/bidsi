@@ -2,6 +2,12 @@
 clean_fields = true
 include_session_dir = false
 
+[logging]
+level = "INFO"
+
+[report]
+email_report = true
+
 [merge]
 participants = "MERGE"
 dataset_description = "OVERWRITE"
