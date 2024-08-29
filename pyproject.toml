@@ -10,7 +10,7 @@ packages = [{include = "bidsi", from = "src"}]
 [tool.poetry.dependencies]
 python = "~3.12"
 pandas = "^2.2.2"
-pydantic-settings = "^2.3.1"
+pydantic-settings = "^2.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.2"
