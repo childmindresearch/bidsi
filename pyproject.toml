@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Library for writing BIDS file structures."
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   {name = "Gabriel Schubiner", email = "gabriel.schubiner@childmind.org"},
 ]
