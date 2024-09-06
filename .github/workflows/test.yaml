@@ -11,15 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install poetry
-      run: pipx install poetry
-    - uses: actions/setup-python@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
       with:
-        python-version-file: pyproject.toml
-        cache: poetry
-    - name: Install dependencies
-      run: |
-        poetry install
+        version: latest
     - name: Run tests
       id: run-tests
       run: >
@@ -40,30 +35,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install poetry
-      run: pipx install poetry
-    - uses: actions/setup-python@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
       with:
-        python-version-file: pyproject.toml
-        cache: poetry
-    - name: Install dependencies
-      run: |
-        poetry install
+        version: latest
     - name: Ruff format
-      run: poetry run ruff format --check
+      run: uv run ruff format --check
     - name: Ruff check
-      run: poetry run ruff check
+      run: uv run ruff check
 
   mypy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install poetry
-      run: pipx install poetry
-    - uses: actions/setup-python@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
       with:
-        python-version: '3.11'
-        cache: poetry
+        version: latest
     - run: |
-        poetry install
-        poetry run mypy .
+        uv run mypy .
